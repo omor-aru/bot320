@@ -6,12 +6,36 @@ let xfont = null;
 let yfont = null;
 let categoryEmoji = null;
 
+// ===== Video API (random video every time) =====
+// NOTE: ফাইলের নাম (video.json) আপনার repo অনুযায়ী বদলে নিন
+const VIDEO_API = "https://raw.githubusercontent.com/Alvee-Evan-telegrame-bot/rv-api/main/video.json";
+const FALLBACK_VIDEO = "https://files.catbox.moe/uoljwh.mp4";
+let videoList = null;
+
+async function getRandomVideo() {
+ try {
+ if (!videoList) {
+ const res = await axios.get(VIDEO_API);
+ let data = res.data;
+ if (typeof data === "string") data = JSON.parse(data);
+ if (!Array.isArray(data)) data = data.videos || data.data || Object.values(data);
+ videoList = data
+ .map(v => (typeof v === "string" ? v : v.url || v.video || v.link))
+ .filter(Boolean);
+ }
+ if (!videoList.length) return FALLBACK_VIDEO;
+ return videoList[Math.floor(Math.random() * videoList.length)];
+ } catch (err) {
+ return FALLBACK_VIDEO;
+ }
+}
+
 async function loadResources() {
  try {
  const [catRes, cmdRes, emojiRes] = await Promise.all([
- axios.get("https://raw.githubusercontent.com/Saim-x69x/sakura/main/xfont.json"),
- axios.get("https://raw.githubusercontent.com/Saim-x69x/sakura/main/yfont.json"),
- axios.get("https://raw.githubusercontent.com/Saim-x69x/sakura/main/category.json")
+ axios.get("https://raw.githubusercontent.com/Alvee-Evan-telegrame-bot/rv-api/main/xfont.json"),
+ axios.get("https://raw.githubusercontent.com/Alvee-Evan-telegrame-bot/rv-api/main/yfont.json"),
+ axios.get("https://raw.githubusercontent.com/Alvee-Evan-telegrame-bot/rv-api/main/category.json")
  ]);
  xfont = catRes.data;
  yfont = cmdRes.data;
@@ -74,7 +98,7 @@ module.exports = {
  config: {
  name: "help",
  aliases: "menu",
- version: "2.0",
+ version: "2.1",
  author: "rocky404",
  countDown: 5,
  role: 0,
@@ -98,7 +122,8 @@ module.exports = {
  categories[cat].push(name);
  }
 
- const helpImage = "https://files.catbox.moe/uoljwh.mp4";
+ // প্রতিবার help দিলে আলাদা random video
+ const helpImage = await getRandomVideo();
  const input = args.join(" ").trim();
 
  if (args[0] === "-c" && args[1]) {
@@ -181,7 +206,7 @@ module.exports = {
 ╎🧩 Name : ${c.name}
 ╎📦 Category : ${(c.category || "UNCATEGORIZED").toUpperCase()}
 ╎📜 Description: ${c.longDescription?.en || "No description."}
-╎🔁 Aliases : ${c.aliases ? c.aliases.join(", ") : "None"}
+╎🔁 Aliases : ${c.aliases ? [].concat(c.aliases).join(", ") : "None"}
 ╎⚙️ Version : ${c.version || "1.0"}
 ╎🔐 Permission : ${c.role} (${roleTextToString(c.role)})
 ╎⏱️ Cooldown : ${c.countDown || 5}s
